@@ -1,0 +1,5 @@
+1. POST /train (Params: list of images)
+2. POST /generate (Params: prompt)
+3. GET /loadImages (Params: ?limit/offsets)
+4. POST /generate/pack (Params: )
+5. GET /packs
