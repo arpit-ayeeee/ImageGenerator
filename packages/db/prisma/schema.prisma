@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String      @id    @default(uuid())
+  username        String
+  profilePicture  String?
+}
+
+model Model {
+  id              String      @id     @default(uuid())     
+  name            String
+  type            ModelType
+  age             Int
+  ethinicity      EthinicityType
+  eyeColor        EyeColorType
+  bald            Boolean   
+  trainingImages  TrainingImages[]
+  outputImages    OutputImages[]
+}
+
+model TrainingImages {
+  id              String      @id     @default(uuid())
+  imageUrl        String
+  modelId         String
+  model           Model       @relation(fields: [modelId], references: [id])
+}
+
+model OutputImages {
+  id              String      @id     @default(uuid())
+  imageUrl        String
+  modelId         String
+  userId          String
+  model           Model       @relation(fields: [modelId], references: [id])
+}
+
+model Packs {
+ id              String      @id     @default(uuid())
+ name            String
+ packPrompts     PackPrompts[]
+}
+
+model PackPrompts {
+  id              String      @id     @default(uuid())
+  prompt          String
+  packId          String
+  pack            Packs      @relation(fields: [packId], references: [id])
+}
+
+//ENUMS
+enum ModelType { 
+  Man
+  Woman
+  Others
+}
+
+enum EthinicityType {
+  Black 
+  AsianAmerican
+  White
+  EastAsian
+  SouthEastAsian
+  SouthAsian
+  MiddleEastern
+  Pacifi
+  Hispanic
+}
+
+enum EyeColorType {
+  Brown
+  Blue
+  Hazel
+  Gray
+}
