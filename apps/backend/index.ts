@@ -2,6 +2,7 @@ import express from "express";
 import aiRoutes from './routes/aiRoutes';
 import packRoutes from './routes/packRoutes';
 import imageRoutes from './routes/imageRoutes';
+import { TrainModel, GenerateImage, GenerateImagesFromPack } from "common/types";
 
 const PORT = process.env.PORT || 8080;
 
