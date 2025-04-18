@@ -14,9 +14,10 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@fal-ai/client": "^1.4.0",
     "@types/express": "^5.0.1",
-    "express": "^5.1.0",
     "common": "*",
-    "db": "*"
+    "db": "*",
+    "express": "^5.1.0"
   }
 }

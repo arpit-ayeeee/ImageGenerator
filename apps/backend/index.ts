@@ -2,6 +2,7 @@ import express from "express";
 import { TrainModel, GenerateImage, GenerateImagesFromPack} from "common/types";
 import { prismaClient } from "db";
 
+//In BUN, we dont need any external providers like dotenv, we can just use the .env file directly
 const PORT = process.env.PORT || 8080;
 
 const app = express();

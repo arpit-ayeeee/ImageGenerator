@@ -3,3 +3,8 @@
 3. GET /loadImages (Params: ?limit/offsets)
 4. POST /generate/pack (Params: )
 5. GET /packs
+
+Notes:
+
+-> In BUN, we dont need any external providers like dotenv, we can just use the .env file directly
+-> Here, we'll implement a strategy pattern, which enables us to easily switch between service providers, like FAL, Replicate
