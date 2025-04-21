@@ -1,6 +1,7 @@
 import express from "express";
 import { TrainModel, GenerateImage, GenerateImagesFromPack} from "common/types";
 import { prismaClient } from "db";
+import { FalAiModel } from "./aimodels/FalAiModel";
 
 //In BUN, we dont need any external providers like dotenv, we can just use the .env file directly
 const PORT = process.env.PORT || 8080;
@@ -10,10 +11,15 @@ app.use(express.json());
 
 const USER_ID = "123";
 
+const FalAiClient = new FalAiModel();
+
 app.post("ai/training", async (req, res) => {
 
   //Parsing the data according to the schema type expected
   const parsedData = TrainModel.safeParse(req.body);
+
+  const images = req.body.images;
+  //Zip images, send it to s3, and get the URL
 
   console.log(parsedData);
 
@@ -28,6 +34,8 @@ app.post("ai/training", async (req, res) => {
       return;
   }
 
+  const {request_id, response_url} = await FalAiClient.trainModel("", parsedData.data.name);
+
   const data = await prismaClient.model.create({
       data: {
           name: parsedData.data.name,
@@ -36,7 +44,8 @@ app.post("ai/training", async (req, res) => {
           ethinicity: parsedData.data.ethinicity,
           eyeColor: parsedData.data.eyeColor,
           bald: parsedData.data.bald,
-          userId: parsedData.data.userId ?? USER_ID
+          userId: parsedData.data.userId ?? USER_ID,
+          falAiReqId: request_id
       }
   })
 
@@ -65,12 +74,29 @@ app.post("ai/generate", async (req, res) => {
       return;
   }
 
+  const model = await prismaClient.model.findUnique({
+    where: {
+      id: parsedData.data.modelId
+    }
+  });
+
+  if(!model || !model?.tensorPath) {
+    res
+      .status(411)
+      .json({
+        error: "Model not found"
+      });
+      
+  }
+  const {request_id, response_url} = await FalAiClient.generateImage(parsedData.data.prompt, model?.tensorPath ?? "");
+
   const data = await prismaClient.outputImages.create({
       data: {
           prompt: parsedData.data.prompt,
           userId: parsedData.data.userId ?? USER_ID,
           modelId: parsedData.data.modelId,
           imageUrl: "",
+          falAiReqId: request_id
       }
   });
 

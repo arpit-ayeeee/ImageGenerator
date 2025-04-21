@@ -9,7 +9,7 @@ export class FalAiModel extends BaseModel {
     //Here we'll overwrite the generateImage method from the base/abstract class
 
     //Here we'll use the fal-ai client to generate an image
-    private async generateImage(prompt: string, tensorPath: string) {
+    public async generateImage(prompt: string, tensorPath: string) {
 
         //Here we'll use the fal-ai client to generate an image
         //This is comparatively simpler, since we are hitting fal for image, wait for it and get the images
@@ -32,7 +32,7 @@ export class FalAiModel extends BaseModel {
     //Here we'll use the fal-ai client to train a model
     //Here we cant keep waiting, since it's a training job, it'll take time
     //We'll use webhook here
-    private async trainModel(zipUrl: string, triggerWord: string) {
+    public async trainModel(zipUrl: string, triggerWord: string) {
 
         //inputImageUrl is the url of the zip archive that will have the images to train the model
 
