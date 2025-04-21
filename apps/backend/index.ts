@@ -151,6 +151,51 @@ app.get("/images/bulk", async (req, res) => {
         });
 });
 
+//Webhook
+app.post("/fal-ai/webhook/train", async (req, res) => {
+  console.log(req.body);
+
+  const request_id = req.body.request_id as string;
+
+  //If we are updating a Model, other than the primary key, we need to make a unique index on that key
+  // If this gives error in future, remove the index from falReqId and use updateMany
+  await prismaClient.model.update({
+    where: {
+        falAiReqId: request_id
+    },
+    data: {
+      status: "Completed",
+      tensorPath: req.body.tensorPath,
+    }
+  });
+
+  res
+    .status(200)
+    .json("Webhook train received");
+});
+
+app.post("/fal-ai/webhook/image", async (req, res) => {
+    console.log(req.body);
+  
+
+    //If we are updating a Model, other than the primary key, we need to make a unique index on that key
+    // If this gives error in future, remove the index from falReqId and use updateMany
+    await prismaClient.outputImages.update({
+      where: {
+        falAiReqId: req.body.request_id
+      },
+      data: {
+        status: "Generated",
+        imageUrl: req.body.imageUrl
+      }
+    });
+
+    res
+      .status(200)
+      .json("Webhook imagereceived");
+  });
+  
+
 app.listen(PORT, () => {
   console.log("Server is running on port 3000");
 });
