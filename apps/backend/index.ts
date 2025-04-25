@@ -79,7 +79,6 @@ app.post("ai/training", async (req, res) => {
         .json({ 
             modelId: data.id 
         });
-
 });
 
 // Route to generate an image based on the trained model
@@ -133,37 +132,46 @@ app.post("ai/generate", async (req, res) => {
       });
 });
 
+// Route to generate images based on a pack
 app.post("pack/generate", async (req, res) => {
-  const parsedData = GenerateImagesFromPack.safeParse(req.body);
 
-  if (!parsedData.success) {
-      res
-          .status(411)
-          .json({ error: "Incorrect input" });
-      return;
-  }
+    const parsedData = GenerateImagesFromPack.safeParse(req.body);
 
-  const prompts = await prismaClient.packPrompts.findMany({
-      where: {
-          packId: parsedData.data.packId
-      }
-  });
+    if (!parsedData.success) {
+        res
+            .status(411)
+            .json({ error: "Incorrect input" });
+        return;
+    }
 
-  const images = await prismaClient.outputImages.createManyAndReturn({
-      data: prompts.map((prompt: any) => ({
-          prompt: prompt.prompt,
-          userId: USER_ID,
-          modelId: parsedData.data.modelId,
-          imageUrl: ""
-      }))
-  });
+    const prompts = await prismaClient.packPrompts.findMany({
+        where: {
+            packId: parsedData.data.packId
+        }
+    });
+    
+    let requestIds: {request_id: string}[] = await Promise.all(
+        prompts.map(async (prompt) => {
+            return await FalAiClient.generateImage(prompt.prompt, parsedData.data.modelId);
+        })
+    );
 
-  //Return the entry id created for each image, since actual image generation will happen in third party, and pushed via webhook ?? CHECK
-  res
-      .status(200)
-      .json({
-          imageIds: images.map((image: any) => image.id)
-      });
+    const images = await prismaClient.outputImages.createManyAndReturn({
+        data: prompts.map((prompt: any, index: number) => ({
+            prompt: prompt.prompt,
+            userId: USER_ID,
+            modelId: parsedData.data.modelId,
+            imageUrl: "",
+            falAiReqId: requestIds[index]?.request_id
+        }))
+    });
+
+    //Return the entry id created for each image, since actual image generation will happen in third party, and pushed via webhook ?? CHECK
+    res
+        .status(200)
+        .json({
+            imageIds: images.map((image: any) => image.id)
+        });
 });
 
 // Route to get all the packs available
