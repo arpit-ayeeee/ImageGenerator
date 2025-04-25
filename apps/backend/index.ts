@@ -17,21 +17,24 @@ const FalAiClient = new FalAiModel();
 
 app.get("/pre-signed-url", async (req, res) => {
 
-  const url = S3Client.presign(`models/${Date.now()}_${Math.random()}.zip`, {
-    accessKeyId: process.env.ACCESS_KEY_ID,
-    secretAccessKey: process.env.SECRET_ACCESS_KEY,
-    endpoint: process.env.ENDPOINT,
-    bucket: process.env.BUCKET_NAME,
-    expiresIn: 60 * 5
-  });
+    const key = `models/${Date.now()}_${Math.random()}.zip`;
 
-  console.log(url);
-
-  res
-    .status(200)
-    .json({
-      url: url
+    const url = S3Client.presign(key, {
+        accessKeyId: process.env.ACCESS_KEY_ID,
+        secretAccessKey: process.env.SECRET_ACCESS_KEY,
+        endpoint: process.env.ENDPOINT,
+        bucket: process.env.BUCKET_NAME,
+        expiresIn: 60 * 5
     });
+
+    console.log(url);
+
+    res
+        .status(200)
+        .json({
+            url: url,
+            key: key
+        });
 });
 
 app.post("ai/training", async (req, res) => {
