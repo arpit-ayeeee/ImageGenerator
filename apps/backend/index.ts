@@ -2,9 +2,11 @@ import express from "express";
 import { TrainModel, GenerateImage, GenerateImagesFromPack} from "common/types";
 import { prismaClient } from "db";
 import { FalAiModel } from "./aimodels/FalAiModel";
+import { S3Client } from "bun";
 
 //In BUN, we dont need any external providers like dotenv, we can just use the .env file directly
 const PORT = process.env.PORT || 8080;
+
 
 const app = express();
 app.use(express.json());
@@ -13,15 +15,34 @@ const USER_ID = "123";
 
 const FalAiClient = new FalAiModel();
 
+app.get("/pre-signed-url", async (req, res) => {
+
+  const url = S3Client.presign(`models/${Date.now()}_${Math.random()}.zip`, {
+    accessKeyId: process.env.ACCESS_KEY_ID,
+    secretAccessKey: process.env.SECRET_ACCESS_KEY,
+    endpoint: process.env.ENDPOINT,
+    bucket: process.env.BUCKET_NAME,
+    expiresIn: 60 * 5
+  });
+
+  console.log(url);
+
+  res
+    .status(200)
+    .json({
+      url: url
+    });
+});
+
 app.post("ai/training", async (req, res) => {
 
   //Parsing the data according to the schema type expected
   const parsedData = TrainModel.safeParse(req.body);
-
-  const images = req.body.images;
-  //Zip images, send it to s3, and get the URL
-
   console.log(parsedData);
+
+  //We'll get the ZIP of images from client, where images will be converted to ZIP, and sent to s3
+  //Client will ask server for a presigned URL for the ZIP file, and then upload the ZIP file to S3
+  //We'll then get the URL of the ZIP file from S3, and sent it here
 
   if (!parsedData.success) {
 
@@ -34,26 +55,27 @@ app.post("ai/training", async (req, res) => {
       return;
   }
 
-  const {request_id, response_url} = await FalAiClient.trainModel("", parsedData.data.name);
+  const {request_id, response_url} = await FalAiClient.trainModel(parsedData.data.zipUrl, parsedData.data.name);
 
   const data = await prismaClient.model.create({
-      data: {
-          name: parsedData.data.name,
-          type: parsedData.data.type,
-          age: parsedData.data.age,
-          ethinicity: parsedData.data.ethinicity,
-          eyeColor: parsedData.data.eyeColor,
-          bald: parsedData.data.bald,
-          userId: parsedData.data.userId ?? USER_ID,
-          falAiReqId: request_id
-      }
+        data: {
+            name: parsedData.data.name,
+            type: parsedData.data.type,
+            age: parsedData.data.age,
+            ethinicity: parsedData.data.ethinicity,
+            eyeColor: parsedData.data.eyeColor,
+            bald: parsedData.data.bald,
+            userId: parsedData.data.userId ?? USER_ID,
+            falAiReqId: request_id,
+            zipUrl: parsedData.data.zipUrl
+        }
   })
 
   res
-      .status(200)
-      .json({ 
-          modelId: data.id 
-      });
+        .status(200)
+        .json({ 
+            modelId: data.id 
+        });
 
 });
 
@@ -66,26 +88,27 @@ app.post("ai/generate", async (req, res) => {
   console.log(parsedData);
 
   if (!parsedData.success) {
-      res
-          .status(411)
-          .json({ 
-              error: "Incorrect input"
-          });
+        res
+            .status(411)
+            .json({ 
+                error: "Incorrect input"
+            });
+
       return;
   }
 
   const model = await prismaClient.model.findUnique({
     where: {
-      id: parsedData.data.modelId
+        id: parsedData.data.modelId
     }
   });
 
   if(!model || !model?.tensorPath) {
     res
-      .status(411)
-      .json({
-        error: "Model not found"
-      });
+        .status(411)
+        .json({
+            error: "Model not found"
+        });
       
   }
   const {request_id, response_url} = await FalAiClient.generateImage(parsedData.data.prompt, model?.tensorPath ?? "");
@@ -207,21 +230,20 @@ app.post("/fal-ai/webhook/image", async (req, res) => {
     //If we are updating a Model, other than the primary key, we need to make a unique index on that key
     // If this gives error in future, remove the index from falReqId and use updateMany
     await prismaClient.outputImages.update({
-      where: {
-        falAiReqId: req.body.request_id
-      },
-      data: {
-        status: "Generated",
-        imageUrl: req.body.imageUrl
-      }
+        where: {
+            falAiReqId: req.body.request_id
+        },
+        data: {
+            status: "Generated",
+            imageUrl: req.body.imageUrl
+        }
     });
 
     res
-      .status(200)
-      .json("Webhook imagereceived");
-  });
+        .status(200)
+        .json("Webhook image received");
+});
   
-
 app.listen(PORT, () => {
-  console.log("Server is running on port 3000");
+    console.log("Server is running on port", PORT);
 });

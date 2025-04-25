@@ -24,7 +24,7 @@ export const TrainModel = z.object({
     ]),
     bald: z.boolean(),
     userId: z.string(),
-    images: z.array(z.string())
+    zipUrl: z.string()
 })
 
 //When a user wants to generate images basis the model
